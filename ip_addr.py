@@ -30,14 +30,14 @@ def speak_ipv4_addresses():
         tts_eth0 = gTTS(text=f"유선랜 주소는 {eth0_address}입니다.", lang='ko')
     
 
-    tts_wlan0.save("./tmp/wlan0_address.mp3")
-    tts_eth0.save("./tmp/eth0_address.mp3")
+    tts_wlan0.save("tmp/wlan0_address.mp3")
+    tts_eth0.save("tmp/eth0_address.mp3")
 
     
-    playsound("/home/pi/home-PRD/audio/start.mp3", True)
+    playsound("audio/start.mp3", True)
     time.sleep(3)
-    playsound("/home/pi/home-PRD/tmp/wlan0_address.mp3", True)  # True: 1.5배속 재생
-    playsound("/home/pi/home-PRD/tmp/eth0_address.mp3", True)
+    playsound("tmp/wlan0_address.mp3", True)  # True: 1.5배속 재생
+    playsound("tmp/eth0_address.mp3", True)
 
 if __name__ == "__main__":
     speak_ipv4_addresses()
