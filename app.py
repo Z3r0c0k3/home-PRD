@@ -3,6 +3,7 @@ import time
 import requests
 import RPi.GPIO as GPIO
 import bluetooth
+import json
 
 # 텔레그램 봇 정보 설정
 bot_token = 'YOUR_BOT_TOKEN'
@@ -28,7 +29,7 @@ def send_telegram_alert_with_buttons(message):
     reply_markup = {
         "inline_keyboard": [
             [
-                {"text": "전력복구 및 서버 재시작", "callback_data": "restart"},
+                {"text": "전력복구 및 서버 재시작", "callback_data": "recovery"},
                 {"text": "정상 종료", "callback_data": "shutdown"}
             ]
         ]
@@ -49,13 +50,13 @@ def power_cycle_server():
     GPIO.output(특정_핀_번호, GPIO.HIGH)  # 서버 전원 켜기
 
 def ping_server():
-    response = subprocess.call(['ping', '-c', '1', target_ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    response = subprocess.call(['ping', '-c', '3', target_ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return response == 0
 
 while True:
     if not ping_server():
         while True:
-            send_telegram_alert_with_buttons("서버와의 연결이 끊어졌습니다. 서버 상태를 확인해주세요.\n서버명: Proxmox")
+            send_telegram_alert_with_buttons("서버의 전원이 종료가 감지되었습니다. 버튼을 눌러 처리주세요.\n서버명: Proxmox")
             time.sleep(60)  # 1분 대기
             if ping_server() or GPIO.input(0) == GPIO.HIGH:
                 break
@@ -65,9 +66,11 @@ while True:
             power_cycle_server()
         else:
             if ping_server():
-                send_telegram_alert("정상 종료가 확인되었습니다. 경보시스템을 종료합니다.")
+                send_telegram_alert("정상 종료가 승인되었습니다. 경보시스템을 종료합니다.")
+                subprocess.call(["mpg321", "-q", "shutdown.mp3"])
             else:
                 while not ping_server():
                     time.sleep(1)  # 1초 대기
                 send_telegram_alert("서버와 연결되었습니다. 전력복구장치 작동을 재개합니다.")
+                subprocess.call(["mpg321", "-q", "server_reconnected.mp3"])
     time.sleep(30)  # 30초 대기
