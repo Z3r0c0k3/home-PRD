@@ -17,7 +17,7 @@ def get_ipv4_address(interface):
 def speak_ipv4_addresses():
     """wlan0 및 eth0의 IPv4 주소를 음성으로 출력합니다."""
     wlan0_address = get_ipv4_address('wlan0')
-    eth0_address = get_ipv4_address('en0')
+    eth0_address = get_ipv4_address('eth0')
     
     if wlan0_address == None:
         tts_wlan0 = gTTS(text=f"무선랜 주소는 할당되지 않았습니다.", lang='ko')
