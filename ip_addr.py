@@ -16,6 +16,7 @@ def get_ipv4_address(interface):
 
 def speak_ipv4_addresses():
     """wlan0 및 eth0의 IPv4 주소를 음성으로 출력합니다."""
+    playsound("audio/start.mp3", True)
     wlan0_address = get_ipv4_address('wlan0')
     eth0_address = get_ipv4_address('eth0')
     
@@ -33,8 +34,6 @@ def speak_ipv4_addresses():
     tts_wlan0.save("tmp/wlan0_address.mp3")
     tts_eth0.save("tmp/eth0_address.mp3")
 
-    
-    playsound("audio/start.mp3", True)
     time.sleep(3)
     playsound("tmp/wlan0_address.mp3", True)  # True: 1.5배속 재생
     playsound("tmp/eth0_address.mp3", True)
