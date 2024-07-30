@@ -12,7 +12,7 @@ def get_ipv4_address(interface):
         if match:
             return match.group(1)
     except Exception as e:
-        pass
+        return None
 
 def speak_ipv4_addresses():
     """wlan0 및 eth0의 IPv4 주소를 음성으로 출력합니다."""
