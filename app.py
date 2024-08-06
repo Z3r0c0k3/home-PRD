@@ -10,7 +10,7 @@ from telegram.ext import Application, CallbackQueryHandler, ContextTypes
 ## 전역변수
 last_sent_message_id = None
 restart_flag = False
-updater = None
+updater = Application.builder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").build()
 
 # Bluetooth 설정
 server_mac_address = "YOUR_BLUETOOTH_MAC_ADDRESS"  # Bluetooth MAC 주소
@@ -126,13 +126,6 @@ def main():
             restart_flag = False
             break
 
-def updater_object_creator():
-    global updater
-
-    # Updater 객체 생성 (최초 한 번만)
-    if updater is None:
-        updater = Application.builder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").build()
-
 if __name__ == '__main__':
     ## GPIO 설정
     btn_pin = 17
@@ -142,7 +135,6 @@ if __name__ == '__main__':
     ## PING IP 주소
     target_ip = "192.168.1.3"
 
-    updater_object_creator()
     updater.add_handler(CallbackQueryHandler(callback_listener))
     updater.run_polling()
 
