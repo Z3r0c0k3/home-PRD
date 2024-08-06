@@ -5,8 +5,7 @@ from playsound import playsound
 import RPi.GPIO as GPIO
 import bluetooth
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, Contex   
-tTypes, JobQueue
+from telegram.ext import ApplicationBuilder, CallbackQueryHandler, ContextTypes, JobQueue
 
 # 설정 값
 TELEGRAM_BOT_TOKEN = "7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE"
