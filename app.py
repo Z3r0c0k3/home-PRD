@@ -39,7 +39,8 @@ async def tg_button_message(application: Application) -> None:
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-
+    
+    global last_sent_message_id
     # 이전에 보낸 메시지가 있다면 삭제
     if last_sent_message_id:
         await application.bot.delete_message(chat_id=id, message_id=last_sent_message_id)
