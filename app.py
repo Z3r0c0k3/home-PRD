@@ -82,6 +82,9 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 break
             time.sleep(1)
 
+async def on_startup(application: Application):  # post_init 대신 on_startup 사용
+    await tg_button_message(application)
+
 def main():
     global restart_flag
     global updater
