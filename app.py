@@ -10,6 +10,7 @@ from telegram.ext import Application, CallbackQueryHandler, ContextTypes
 ## 전역변수
 last_sent_message_id = None
 restart_flag = False
+updater = None
 
 # Bluetooth 설정
 server_mac_address = "YOUR_BLUETOOTH_MAC_ADDRESS"  # Bluetooth MAC 주소
@@ -82,7 +83,14 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             time.sleep(1)
 
 def main():
+    global restart_flag
+    global updater
     POLLING_TIMEOUT = 10
+
+    # Updater 객체 생성 (최초 한 번만)
+    if updater is None:
+        updater = Application.builder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").build()
+
     while True:
         if not ping_and_check(target_ip):
             while True:
@@ -109,17 +117,12 @@ def main():
                                 break
                             time.sleep(1)
                 ## 원격 처리 로직 
-                application = (
-                    Application.builder()
-                    .token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE")
-                    .post_init(tg_button_message)
-                    .build()
-                )
-                application.add_handler(CallbackQueryHandler(callback_listener))
+                updater.post_init(tg_button_message)
+                updater.add_handler(CallbackQueryHandler(callback_listener))
                 try:
-                    asyncio.run(application.run_polling(timeout=POLLING_TIMEOUT))  # 시간 제한 설정
+                    asyncio.run(updater.start_polling(timeout=POLLING_TIMEOUT))
                 except asyncio.TimeoutError:
-                    pass  # 폴링 시간 초과 시 main 함수 다시 시작
+                    pass  # 폴링 시간 초과 시 다음 반복으로 넘어감
         if restart_flag:
             restart_flag = False
             break
