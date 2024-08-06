@@ -1,20 +1,16 @@
 import subprocess
-import threading
 import time
 from playsound import playsound
 import RPi.GPIO as GPIO
 import bluetooth
-import asyncio
+import threading
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CallbackQueryHandler, ContextTypes
-
-async def on_startup(application: Application):  
-    await tg_button_message(application)
+from telegram.ext import Application, CallbackQueryHandler, ContextTypes, Updater
 
 ## 전역변수
 last_sent_message_id = None
 restart_flag = False
-application = Application.builder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").post_init(on_startup).build() # on_startup 연결
+updater = Updater("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE")  # Updater 객체 생성
 
 # Bluetooth 설정
 server_mac_address = "YOUR_BLUETOOTH_MAC_ADDRESS"  # Bluetooth MAC 주소
@@ -39,7 +35,7 @@ def ping_and_check(target_ip):
 def play_audio(file_path):
     playsound(file_path)
 
-def tg_button_message(application: Application) -> None:
+def tg_button_message():
     id = 5316086823
     keyboard = [
         [
@@ -52,12 +48,13 @@ def tg_button_message(application: Application) -> None:
     global last_sent_message_id
     # 이전에 보낸 메시지가 있다면 삭제
     if last_sent_message_id:
-        application.bot.delete_message(chat_id=id, message_id=last_sent_message_id)
+        updater.bot.delete_message(chat_id=id, message_id=last_sent_message_id)
         # 새로운 메시지 보내기
-        sent_message = application.bot.send_message(chat_id=id, text="서버가 오프라인입니다. 서버명: Proxmox\n아래 버튼을 눌러 처리하십시오.", reply_markup=reply_markup)
+        sent_message = updater.bot.send_message(chat_id=id, text="서버가 오프라인입니다. 서버명: Proxmox\n아래 버튼을 눌러 처리하십시오.", reply_markup=reply_markup)
         last_sent_message_id = sent_message.message_id
     else:
-        application.bot.send_message(chat_id=id, text="서버가 오프라인입니다. 서버명: Proxmox\n아래 버튼을 눌러 처리하십시오.", reply_markup=reply_markup)
+        sent_message = updater.bot.send_message(chat_id=id, text="서버가 오프라인입니다. 서버명: Proxmox\n아래 버튼을 눌러 처리하십시오.", reply_markup=reply_markup)
+        last_sent_message_id = sent_message.message_id
 
 def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -93,14 +90,14 @@ def main():
 
     while True:
         if not ping_and_check(target_ip):
-            tg_button_message() # 텔레그램 메시지 전송 (이제 비동기가 아니므로 await 필요 없음)
+            tg_button_message()
 
             # 버튼 로직을 스레드로 실행
             button_thread = threading.Thread(target=handle_button)
             button_thread.start()
 
             # 텔레그램 폴링을 스레드로 실행
-            telegram_thread = threading.Thread(target=application.start_polling, args=(POLLING_TIMEOUT,))
+            telegram_thread = threading.Thread(target=updater.start_polling, args=(POLLING_TIMEOUT,))
             telegram_thread.start()
 
             # 두 스레드가 종료될 때까지 대기
@@ -149,7 +146,10 @@ if __name__ == '__main__':
     target_ip = "192.168.1.3"
 
     # 핸들러 등록
-    application.add_handler(CallbackQueryHandler(callback_listener))
+    updater.dispatcher.add_handler(CallbackQueryHandler(callback_listener))
 
-    # 봇 실행
-    asyncio.run(application.run_polling()) # 텔레그램 폴링 시작 (비동기)
+    # 텔레그램 봇 시작
+    tg_button_message()
+
+    while True:
+        main()
