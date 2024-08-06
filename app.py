@@ -88,6 +88,7 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 def main():
     global restart_flag
     POLLING_TIMEOUT = 10
+    restart_flag = False  # main 함수 시작 시 restart_flag 초기화
 
     while True:
         if not ping_and_check(target_ip):
@@ -113,13 +114,13 @@ def main():
                             play_audio("audio/server_reconnected.mp3")
                             break
                         time.sleep(1)
-        
+            
         if restart_flag:
             restart_flag = False
             break  # main 함수를 종료하고 다시 시작
 
-        time.sleep(1) # 1초 딜레이
-
+        time.sleep(1)  # 1초 딜레이 (필요한 경우 조절)
+   
 async def main_task():
     # 텔레그램 폴링을 백그라운드에서 실행
     async with application:
@@ -140,5 +141,5 @@ if __name__ == '__main__':
     # 비동기 작업 실행
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.create_task(main_task())
-    loop.run_until_complete(main()) 
+    loop.create_task(main_task())  # main_task를 비동기적으로 실행
+    loop.run_until_complete(main())  # main 함수 실행
