@@ -125,5 +125,8 @@ if __name__ == '__main__':
 
     ## PING IP 주소
     target_ip = "192.168.1.3"
+    
+    ## 이전에 보낸 메시지 ID 
+    last_sent_message_id = None
 
     main()
