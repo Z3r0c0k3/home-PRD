@@ -14,7 +14,7 @@ async def on_startup(application: Application):
 ## 전역변수
 last_sent_message_id = None
 restart_flag = False
-updater = Application.builder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").post_init(on_startup).build() # on_startup 연결
+application = Application.builder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").post_init(on_startup).build() # on_startup 연결
 
 # Bluetooth 설정
 server_mac_address = "YOUR_BLUETOOTH_MAC_ADDRESS"  # Bluetooth MAC 주소
@@ -100,7 +100,7 @@ def main():
             button_thread.start()
 
             # 텔레그램 폴링을 스레드로 실행
-            telegram_thread = threading.Thread(target=updater.start_polling, args=(POLLING_TIMEOUT,))
+            telegram_thread = threading.Thread(target=application.start_polling, args=(POLLING_TIMEOUT,))
             telegram_thread.start()
 
             # 두 스레드가 종료될 때까지 대기
@@ -149,10 +149,7 @@ if __name__ == '__main__':
     target_ip = "192.168.1.3"
 
     # 핸들러 등록
-    updater.dispatcher.add_handler(CallbackQueryHandler(callback_listener))
+    application.add_handler(CallbackQueryHandler(callback_listener))
 
-    # 텔레그램 봇 시작
-    tg_button_message() # 텔레그램 초기 메시지 전송
-
-    while True:
-        main()
+    # 봇 실행
+    asyncio.run(application.run_polling()) # 텔레그램 폴링 시작 (비동기)
