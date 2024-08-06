@@ -15,9 +15,6 @@ try:
         else:
             print("GPIO{} is LOW".format(GPIO_PIN))
 
-        # 0.5초마다 상태 확인
-        time.sleep(0.5)
-
 except KeyboardInterrupt:
     print("종료합니다.")
 
