@@ -87,6 +87,7 @@ async def on_startup(application: Application):  # post_init 대신 on_startup �
 
 def main():
     global restart_flag
+    global updater
     POLLING_TIMEOUT = 10
 
     while True:
@@ -137,11 +138,8 @@ if __name__ == '__main__':
 
     ## PING IP 주소
     target_ip = "192.168.1.3"
-    
-    updater.add_handler(CallbackQueryHandler(callback_listener))  # 핸들러 등록
-    updater.add_handler(Application.on_startup, on_startup)
 
-    # asyncio.run(main_task())  # 텔레그램 폴링 시작
+    # 비동기 작업 실행
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.create_task(main_task())
