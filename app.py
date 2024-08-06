@@ -90,10 +90,6 @@ def main():
     global updater
     POLLING_TIMEOUT = 10
 
-    # Updater 객체 생성 (최초 한 번만)
-    if updater is None:
-        updater = Application.builder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").build()
-
     while True:
         if not ping_and_check(target_ip):
             while True:
@@ -130,6 +126,13 @@ def main():
             restart_flag = False
             break
 
+def updater_object_creator():
+    global updater
+
+    # Updater 객체 생성 (최초 한 번만)
+    if updater is None:
+        updater = Application.builder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").build()
+
 if __name__ == '__main__':
     ## GPIO 설정
     btn_pin = 17
@@ -139,7 +142,9 @@ if __name__ == '__main__':
     ## PING IP 주소
     target_ip = "192.168.1.3"
 
+    updater_object_creator()
+    updater.add_handler(CallbackQueryHandler(callback_listener))
+    updater.run_polling()
+
     while True:
-        updater.add_handler(CallbackQueryHandler(callback_listener))
-        updater.run_polling()
         main()
