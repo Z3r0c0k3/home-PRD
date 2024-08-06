@@ -7,7 +7,7 @@ import asyncio
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, ContextTypes
 
-async def on_startup(application: Application):
+async def on_startup(application: Application):  
     await tg_button_message(application)
 
 ## 전역변수
@@ -87,50 +87,44 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 def main():
     global restart_flag
-    POLLING_TIMEOUT = 10
     restart_flag = False  # main 함수 시작 시 restart_flag 초기화
 
     while True:
         if not ping_and_check(target_ip):
-            play_audio("audio/stop_server.mp3") # 처음 한번만 알람
-            ## 버튼 로직
-            if GPIO.input(btn_pin) == GPIO.HIGH:
-                time.sleep(5)
+            play_audio("audio/stop_server.mp3")
+            while True:
+                ## 버튼 로직
                 if GPIO.input(btn_pin) == GPIO.HIGH:
-                    ## 정상 종료 로직 (버튼)
-                    play_audio("audio/shutdown.mp3")
-                    while True:
-                        if ping_and_check(target_ip):
-                            play_audio("audio/server_reconnected.mp3")
-                            break
-                        time.sleep(1)
-                else:
-                    ## 시스템 복구 로직 (버튼)
-                    play_audio("audio/button_recovery.mp3")
-                    send_bluetooth_signal("start_server")
-                    time.sleep(60)
-                    while True:
-                        if ping_and_check(target_ip):
-                            play_audio("audio/server_reconnected.mp3")
-                            break
-                        time.sleep(1)
-            
-            ## 원격 처리 로직 
-            application.add_handler(CallbackQueryHandler(callback_listener)) # 콜백 핸들러 등록 
-            try:
-                asyncio.run(application.run_polling(timeout=POLLING_TIMEOUT))
-            except asyncio.TimeoutError:
-                pass  # 폴링 시간 초과 시 다음 반복으로 넘어감
-        else: # 서버가 켜져있을 때
-            time.sleep(1) # 1초 딜레이
+                    time.sleep(5)
+                    if GPIO.input(btn_pin) == GPIO.HIGH:
+                        ## 정상 종료 로직 (버튼)
+                        play_audio("audio/shutdown.mp3")
+                        while True:
+                            if ping_and_check(target_ip):
+                                play_audio("audio/server_reconnected.mp3")
+                                break
+                            time.sleep(1)
+                    else:
+                        ## 시스템 복구 로직 (버튼)
+                        play_audio("audio/button_recovery.mp3")
+                        send_bluetooth_signal("start_server")
+                        time.sleep(60)
+                        while True:
+                            if ping_and_check(target_ip):
+                                play_audio("audio/server_reconnected.mp3")
+                                break
+                            time.sleep(1)
 
         if restart_flag:
             restart_flag = False
-            break
-
+            break  # main 함수를 종료하고 다시 시작
+        
+        await asyncio.sleep(1) # 비동기 1초 딜레이 추가
+   
 async def main_task():
     # 텔레그램 폴링을 백그라운드에서 실행
-    await application.run_polling()
+    async with application:
+        await application.start_polling()
 
 if __name__ == '__main__':
     ## GPIO 설정
@@ -148,4 +142,4 @@ if __name__ == '__main__':
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.create_task(main_task())
-    main() # main 함수 호출 추가
+    loop.run_until_complete(main())
