@@ -74,7 +74,7 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             time.sleep(1)
 
 def main():
-    POLLING_TIMEOUT = 30
+    POLLING_TIMEOUT = 10
     while True:
         if not ping_and_check(target_ip):
             while True:
@@ -100,10 +100,6 @@ def main():
                                 play_audio("audio/server_reconnected.mp3")
                                 main()
                             time.sleep(1)
-                time.sleep(10)
-                play_audio("audio/stop_server.mp3")
-                time.sleep(10)
-                
                 ## 원격 처리 로직 
                 application = (
                     Application.builder()
@@ -116,6 +112,10 @@ def main():
                     asyncio.run(application.run_polling(timeout=POLLING_TIMEOUT))  # 시간 제한 설정
                 except asyncio.TimeoutError:
                     continue  # 폴링 시간 초과 시 main 함수 다시 시작
+                play_audio("audio/stop_server.mp3")
+                time.sleep(10)
+
+last_sent_message_id = None
 
 if __name__ == '__main__':
     ## GPIO 설정
@@ -125,8 +125,5 @@ if __name__ == '__main__':
 
     ## PING IP 주소
     target_ip = "192.168.1.3"
-    
-    ## 이전에 보낸 메시지 ID 
-    last_sent_message_id = None
 
     main()
