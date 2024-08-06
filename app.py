@@ -7,6 +7,10 @@ import asyncio
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, ContextTypes
 
+## 전역변수
+last_sent_message_id = None
+restart_flag = False
+
 # Bluetooth 설정
 server_mac_address = "YOUR_BLUETOOTH_MAC_ADDRESS"  # Bluetooth MAC 주소
 port = 1
@@ -39,7 +43,7 @@ async def tg_button_message(application: Application) -> None:
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     global last_sent_message_id
     # 이전에 보낸 메시지가 있다면 삭제
     if last_sent_message_id:
@@ -53,6 +57,7 @@ async def tg_button_message(application: Application) -> None:
 async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
+    global restart_flag
     callback = query.data
     if callback == "normal":
         play_audio("audio/shutdown.mp3")
@@ -61,7 +66,8 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             if ping_and_check(target_ip):
                 play_audio("audio/server_reconnected.mp3")
                 await context.bot.send_message(chat_id=update.effective_chat.id, text=f"서버가 온라인 상태입니다.")
-                main()
+                restart_flag = True
+                break
     elif callback == "recovery":
         play_audio("audio/remote_recovery.mp3")
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"시스템 복구 로직을 진행합니다.")
@@ -71,7 +77,8 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             if ping_and_check(target_ip):
                 play_audio("audio/server_reconnected.mp3")
                 await context.bot.send_message(chat_id=update.effective_chat.id, text=f"서버가 온라인 상태입니다.")
-                main()
+                restart_flag = True
+                break
             time.sleep(1)
 
 def main():
@@ -89,7 +96,7 @@ def main():
                         while True:
                             if ping_and_check(target_ip):
                                 play_audio("audio/server_reconnected.mp3")
-                                main()
+                                break
                             time.sleep(1)
                     else:
                         ## 시스템 복구 로직 (버튼)
@@ -99,7 +106,7 @@ def main():
                         while True:
                             if ping_and_check(target_ip):
                                 play_audio("audio/server_reconnected.mp3")
-                                main()
+                                break
                             time.sleep(1)
                 ## 원격 처리 로직 
                 application = (
@@ -112,11 +119,10 @@ def main():
                 try:
                     asyncio.run(application.run_polling(timeout=POLLING_TIMEOUT))  # 시간 제한 설정
                 except asyncio.TimeoutError:
-                    continue  # 폴링 시간 초과 시 main 함수 다시 시작
-                play_audio("audio/stop_server.mp3")
-                time.sleep(10)
-
-last_sent_message_id = None
+                    pass  # 폴링 시간 초과 시 main 함수 다시 시작
+        if restart_flag:
+            restart_flag = False
+            break
 
 if __name__ == '__main__':
     ## GPIO 설정
@@ -127,4 +133,5 @@ if __name__ == '__main__':
     ## PING IP 주소
     target_ip = "192.168.1.3"
 
-    main()
+    while True:
+        main()
