@@ -1,22 +1,25 @@
+import asyncio
 import subprocess
 import time
 from playsound import playsound
 import RPi.GPIO as GPIO
 import bluetooth
-import threading
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CallbackQueryHandler, ContextTypes, Updater
+from telegram.ext import ApplicationBuilder, CallbackQueryHandler, ContextTypes
 
-## 전역변수
+# 전역 변수
 last_sent_message_id = None
 restart_flag = False
-updater = Updater("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE")  # Updater 객체 생성
+target_ip = "192.168.1.3"  # PING IP 주소
+btn_pin = 17
 
 # Bluetooth 설정
-server_mac_address = "YOUR_BLUETOOTH_MAC_ADDRESS"  # Bluetooth MAC 주소
+server_mac_address = "YOUR_BLUETOOTH_MAC_ADDRESS"
 port = 1
-backlog = 1
-size = 1024
+
+# GPIO 설정
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(btn_pin, GPIO.IN)
 
 def send_bluetooth_signal(message):
     try:
@@ -27,129 +30,111 @@ def send_bluetooth_signal(message):
     except bluetooth.btcommon.BluetoothError as err:
         print("Bluetooth Error:", err)
 
-# 1. 기본 수행
 def ping_and_check(target_ip):
     response = subprocess.run(["ping", "-c", "3", target_ip], capture_output=True, text=True)
     return response.returncode == 0
 
 def play_audio(file_path):
-    playsound(file_path)
+    try:
+        playsound(file_path)
+    except playsound.PlaysoundException as e:
+        print("Audio Error:", e)
 
-def tg_button_message():
-    id = 5316086823
-    keyboard = [
-        [
-            InlineKeyboardButton("정상 종료", callback_data="normal"),
-            InlineKeyboardButton("시스템 복구", callback_data="recovery"),
-        ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
+async def send_telegram_message(context: ContextTypes.DEFAULT_TYPE, message_text, reply_markup=None):
     global last_sent_message_id
-    # 이전에 보낸 메시지가 있다면 삭제
-    if last_sent_message_id:
-        updater.bot.delete_message(chat_id=id, message_id=last_sent_message_id)
-        # 새로운 메시지 보내기
-        sent_message = updater.bot.send_message(chat_id=id, text="서버가 오프라인입니다. 서버명: Proxmox\n아래 버튼을 눌러 처리하십시오.", reply_markup=reply_markup)
-        last_sent_message_id = sent_message.message_id
-    else:
-        sent_message = updater.bot.send_message(chat_id=id, text="서버가 오프라인입니다. 서버명: Proxmox\n아래 버튼을 눌러 처리하십시오.", reply_markup=reply_markup)
-        last_sent_message_id = sent_message.message_id
+    chat_id = 5316086823
 
-def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if last_sent_message_id:
+        await context.bot.delete_message(chat_id=chat_id, message_id=last_sent_message_id)
+
+    sent_message = await context.bot.send_message(chat_id=chat_id, text=message_text, reply_markup=reply_markup)
+    last_sent_message_id = sent_message.message_id
+
+async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     query.answer()
     global restart_flag
-    callback = query.data
-    if callback == "normal":
+
+    if query.data == "normal":
         play_audio("audio/shutdown.mp3")
-        context.bot.send_message(chat_id=update.effective_chat.id, text=f"정상 종료처리 되었습니다.")
+        await send_telegram_message(context, "정상 종료 처리되었습니다.")
         while True:
             if ping_and_check(target_ip):
                 play_audio("audio/server_reconnected.mp3")
-                context.bot.send_message(chat_id=update.effective_chat.id, text=f"서버가 온라인 상태입니다.")
+                await send_telegram_message(context, "서버가 온라인 상태입니다.")
                 restart_flag = True
                 break
-    elif callback == "recovery":
+            await asyncio.sleep(1)
+    elif query.data == "recovery":
         play_audio("audio/remote_recovery.mp3")
-        context.bot.send_message(chat_id=update.effective_chat.id, text=f"시스템 복구 로직을 진행합니다.")
+        await send_telegram_message(context, "시스템 복구 로직을 진행합니다.")
         send_bluetooth_signal("start_server")
-        time.sleep(60)
+        await asyncio.sleep(60)
         while True:
             if ping_and_check(target_ip):
                 play_audio("audio/server_reconnected.mp3")
-                context.bot.send_message(chat_id=update.effective_chat.id, text=f"서버가 온라인 상태입니다.")
+                await send_telegram_message(context, "서버가 온라인 상태입니다.")
                 restart_flag = True
                 break
-            time.sleep(1)
+            await asyncio.sleep(1)
 
-def main():
+async def check_ping(context: ContextTypes.DEFAULT_TYPE):
     global restart_flag
-    POLLING_TIMEOUT = 10
-    restart_flag = False
+    if not ping_and_check(target_ip):
+        keyboard = [
+            [
+                InlineKeyboardButton("정상 종료", callback_data="normal"),
+                InlineKeyboardButton("시스템 복구", callback_data="recovery"),
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await send_telegram_message(
+            context,
+            "서버가 오프라인입니다. 서버명: Proxmox\n아래 버튼을 눌러 처리하십시오.",
+            reply_markup=reply_markup
+        )
 
-    while True:
-        if not ping_and_check(target_ip):
-            tg_button_message()
+        # 버튼 입력 대기 및 처리 (callback_listener에서 처리)
+        while not restart_flag:
+            await asyncio.sleep(1)
+        restart_flag = False
 
-            # 버튼 로직을 스레드로 실행
-            button_thread = threading.Thread(target=handle_button)
-            button_thread.start()
-
-            # 텔레그램 폴링을 스레드로 실행
-            telegram_thread = threading.Thread(target=updater.start_polling, args=(POLLING_TIMEOUT,))
-            telegram_thread.start()
-
-            # 두 스레드가 종료될 때까지 대기
-            button_thread.join()
-            telegram_thread.join()
-
-        if restart_flag:
-            restart_flag = False
-            break
-
-        time.sleep(1)
-
-def handle_button():
+async def handle_button_press(context: ContextTypes.DEFAULT_TYPE):
     global restart_flag
     while True:
         if GPIO.input(btn_pin) == GPIO.HIGH:
-            time.sleep(5)
+            await asyncio.sleep(5)
             if GPIO.input(btn_pin) == GPIO.HIGH:
-                ## 정상 종료 로직 (버튼)
+                # 정상 종료 로직 (버튼)
                 play_audio("audio/shutdown.mp3")
                 while True:
                     if ping_and_check(target_ip):
                         play_audio("audio/server_reconnected.mp3")
                         break
-                    time.sleep(1)
+                    await asyncio.sleep(1)
             else:
-                ## 시스템 복구 로직 (버튼)
+                # 시스템 복구 로직 (버튼)
                 play_audio("audio/button_recovery.mp3")
                 send_bluetooth_signal("start_server")
-                time.sleep(60)
+                await asyncio.sleep(60)
                 while True:
                     if ping_and_check(target_ip):
                         play_audio("audio/server_reconnected.mp3")
                         break
-                    time.sleep(1)
+                    await asyncio.sleep(1)
             restart_flag = True
             break
 
+async def main():
+    application = ApplicationBuilder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").build()
+
+    application.job_queue.run_repeating(check_ping, 1.0)
+    application.job_queue.run_repeating(handle_button_press, 0.2)  # 버튼 입력 확인 주기 단축
+
+    application.add_handler(CallbackQueryHandler(callback_listener))
+
+    await application.initialize()
+    await application.start()
+
 if __name__ == '__main__':
-    ## GPIO 설정
-    btn_pin = 17
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(btn_pin, GPIO.IN)
-
-    ## PING IP 주소
-    target_ip = "192.168.1.3"
-
-    # 핸들러 등록
-    updater.dispatcher.add_handler(CallbackQueryHandler(callback_listener))
-
-    # 텔레그램 봇 시작
-    tg_button_message()
-
-    while True:
-        main()
+    asyncio.run(main())
