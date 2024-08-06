@@ -7,10 +7,13 @@ import asyncio
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, ContextTypes
 
+async def on_startup(application: Application):
+    await tg_button_message(application)
+
 ## 전역변수
 last_sent_message_id = None
 restart_flag = False
-updater = Application.builder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").build()
+application = Application.builder().token("7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE").post_init(on_startup).build() # on_startup 연결
 
 # Bluetooth 설정
 server_mac_address = "YOUR_BLUETOOTH_MAC_ADDRESS"  # Bluetooth MAC 주소
@@ -82,12 +85,8 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 break
             time.sleep(1)
 
-async def on_startup(application: Application):  # post_init 대신 on_startup 사용
-    await tg_button_message(application)
-
 def main():
     global restart_flag
-    global updater
     POLLING_TIMEOUT = 10
 
     while True:
@@ -115,19 +114,13 @@ def main():
                                 play_audio("audio/server_reconnected.mp3")
                                 break
                             time.sleep(1)
-                ## 원격 처리 로직
-                updater.add_handler(CallbackQueryHandler(callback_listener))
-                try:
-                    asyncio.run(updater.start_polling(timeout=POLLING_TIMEOUT))
-                except asyncio.TimeoutError:
-                    pass  # 폴링 시간 초과 시 다음 반복으로 넘어감
         if restart_flag:
             restart_flag = False
             break
 
 async def main_task():
     # 텔레그램 폴링을 백그라운드에서 실행
-    await updater.start_polling()
+    await application.run_polling()
 
 if __name__ == '__main__':
     ## GPIO 설정
@@ -138,9 +131,11 @@ if __name__ == '__main__':
     ## PING IP 주소
     target_ip = "192.168.1.3"
 
+    # 핸들러 등록
+    application.add_handler(CallbackQueryHandler(callback_listener))
+
     # 비동기 작업 실행
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.create_task(main_task())
-    while True:
-        main()
+    main() # main 함수 호출 추가
