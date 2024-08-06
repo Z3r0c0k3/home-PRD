@@ -137,4 +137,6 @@ if __name__ == '__main__':
     target_ip = "192.168.1.3"
 
     while True:
+        updater.add_handler(CallbackQueryHandler(callback_listener))
+        updater.run_polling()
         main()
