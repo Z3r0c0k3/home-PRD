@@ -88,32 +88,42 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 def main():
     global restart_flag
     POLLING_TIMEOUT = 10
+    restart_flag = False  # main 함수 시작 시 restart_flag 초기화
 
     while True:
         if not ping_and_check(target_ip):
-            while True:
-                play_audio("audio/stop_server.mp3")
-                ## 버튼 로직
+            play_audio("audio/stop_server.mp3") # 처음 한번만 알람
+            ## 버튼 로직
+            if GPIO.input(btn_pin) == GPIO.HIGH:
+                time.sleep(5)
                 if GPIO.input(btn_pin) == GPIO.HIGH:
-                    time.sleep(5)
-                    if GPIO.input(btn_pin) == GPIO.HIGH:
-                        ## 정상 종료 로직 (버튼)
-                        play_audio("audio/shutdown.mp3")
-                        while True:
-                            if ping_and_check(target_ip):
-                                play_audio("audio/server_reconnected.mp3")
-                                break
-                            time.sleep(1)
-                    else:
-                        ## 시스템 복구 로직 (버튼)
-                        play_audio("audio/button_recovery.mp3")
-                        send_bluetooth_signal("start_server")
-                        time.sleep(60)
-                        while True:
-                            if ping_and_check(target_ip):
-                                play_audio("audio/server_reconnected.mp3")
-                                break
-                            time.sleep(1)
+                    ## 정상 종료 로직 (버튼)
+                    play_audio("audio/shutdown.mp3")
+                    while True:
+                        if ping_and_check(target_ip):
+                            play_audio("audio/server_reconnected.mp3")
+                            break
+                        time.sleep(1)
+                else:
+                    ## 시스템 복구 로직 (버튼)
+                    play_audio("audio/button_recovery.mp3")
+                    send_bluetooth_signal("start_server")
+                    time.sleep(60)
+                    while True:
+                        if ping_and_check(target_ip):
+                            play_audio("audio/server_reconnected.mp3")
+                            break
+                        time.sleep(1)
+            
+            ## 원격 처리 로직 
+            application.add_handler(CallbackQueryHandler(callback_listener)) # 콜백 핸들러 등록 
+            try:
+                asyncio.run(application.run_polling(timeout=POLLING_TIMEOUT))
+            except asyncio.TimeoutError:
+                pass  # 폴링 시간 초과 시 다음 반복으로 넘어감
+        else: # 서버가 켜져있을 때
+            time.sleep(1) # 1초 딜레이
+
         if restart_flag:
             restart_flag = False
             break
