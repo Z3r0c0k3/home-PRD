@@ -115,8 +115,7 @@ def main():
                                 play_audio("audio/server_reconnected.mp3")
                                 break
                             time.sleep(1)
-                ## 원격 처리 로직 
-                updater.post_init(tg_button_message)
+                ## 원격 처리 로직
                 updater.add_handler(CallbackQueryHandler(callback_listener))
                 try:
                     asyncio.run(updater.start_polling(timeout=POLLING_TIMEOUT))
