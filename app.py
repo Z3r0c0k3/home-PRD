@@ -5,7 +5,8 @@ from playsound import playsound
 import RPi.GPIO as GPIO
 import bluetooth
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, ContextTypes, JobQueue
+from telegram.ext import ApplicationBuilder, CallbackQueryHandler, Contex   
+tTypes, JobQueue
 
 # 설정 값
 TELEGRAM_BOT_TOKEN = "7462646393:AAF2M9Isx-g4pudj32DIEgXLkVFZI8vxzGE"
@@ -17,7 +18,6 @@ BUTTON_PIN = 17
 # 전역 변수
 last_sent_message_id = None
 restart_flag = False
-job_queue = None # 전역 job_queue 변수 추가
 
 # GPIO 설정
 GPIO.setmode(GPIO.BCM)
