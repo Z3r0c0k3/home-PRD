@@ -17,6 +17,7 @@ BUTTON_PIN = 17
 # 전역 변수
 last_sent_message_id = None
 restart_flag = False
+job_queue = None # 전역 job_queue 변수 추가
 
 # GPIO 설정
 GPIO.setmode(GPIO.BCM)
@@ -88,11 +89,12 @@ async def check_ping(context: ContextTypes.DEFAULT_TYPE):
         while not restart_flag:
             await asyncio.sleep(1)
         restart_flag = False
+        await job_queue.start()  # 작업 재시작
 
-# 버튼 입력 감지 및 처리 함수
 async def handle_button_press(context: ContextTypes.DEFAULT_TYPE):
     global restart_flag
     if GPIO.input(BUTTON_PIN) == GPIO.HIGH:
+        await job_queue.stop()  # 작업 일시 중지
         await asyncio.sleep(5)  # 5초 동안 버튼이 계속 눌려있는지 확인 (debounce)
         if GPIO.input(BUTTON_PIN) == GPIO.HIGH:
             # 정상 종료 로직 (버튼)
@@ -106,10 +108,16 @@ async def handle_button_press(context: ContextTypes.DEFAULT_TYPE):
         play_audio("audio/server_reconnected.mp3")
         restart_flag = True
 
-# 메인 함수
 async def main():
-    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).concurrent_updates(True).build()
-    job_queue = application.job_queue
+    global job_queue
+    application = (
+        ApplicationBuilder()
+        .token(TELEGRAM_BOT_TOKEN)
+        .concurrent_updates(True)
+        .job_queue(JobQueue(application))  # JobQueue 인스턴스 생성 및 연결
+        .build()
+    )
+    job_queue = application.job_queue # 전역 job_queue 변수에 할당
     job_queue.run_repeating(check_ping, 1.0)  # 1초마다 ping 확인
     job_queue.run_repeating(handle_button_press, 0.2)  # 0.2초마다 버튼 입력 확인
 
