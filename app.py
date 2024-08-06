@@ -7,6 +7,9 @@ import asyncio
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, ContextTypes
 
+async def on_startup(application: Application):  
+    await tg_button_message(application)
+
 ## 전역변수
 last_sent_message_id = None
 restart_flag = False
@@ -81,9 +84,6 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 restart_flag = True
                 break
             time.sleep(1)
-
-async def on_startup(application: Application):  
-    await tg_button_message(application)
 
 def main():
     global restart_flag
