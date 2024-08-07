@@ -72,26 +72,16 @@ async def callback_listener(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         play_audio("audio/remote_recovery.mp3")
         await send_telegram_message(context, "시스템 복구 로직을 진행합니다.")
         send_bluetooth_signal("start_server")
-        await asyncio.sleep(60)  # 복구 시간 대기
-        while not ping_and_check(TARGET_IP):
-            await asyncio.sleep(1)
-        play_audio("audio/server_reconnected.mp3")
-        await send_telegram_message(context, "서버가 온라인 상태입니다.")
-        restart_flag = True
+        time.sleep(60)
+        while True:
+            if ping_and_check(target_ip):
+                play_audio("audio/server_reconnected.mp3")
+                await context.bot.send_message(chat_id=update.effective_chat.id, text=f"서버가 온라인 상태입니다.")
+                restart_flag = True
+                break
+            time.sleep(1)
 
-# 네트워크 연결 상태 주기적 확인 함수
-async def check_ping(context: ContextTypes.DEFAULT_TYPE):
-    global restart_flag
-    if not ping_and_check(TARGET_IP):
-        keyboard = [[InlineKeyboardButton("정상 종료", callback_data="normal"), InlineKeyboardButton("시스템 복구", callback_data="recovery")]]
-        await send_telegram_message(context, "서버가 오프라인입니다. 서버명: Proxmox\n아래 버튼을 눌러 처리하십시오.", InlineKeyboardMarkup(keyboard))
-        while not restart_flag:
-            await asyncio.sleep(1)
-        restart_flag = False
-        context.job_queue.start()  # 작업 재시작
-
-# 버튼 입력 감지 및 처리 함수
-async def handle_button_press(context: ContextTypes.DEFAULT_TYPE):
+def main():
     global restart_flag
     if GPIO.input(BUTTON_PIN) == GPIO.HIGH:
         context.job_queue.stop()  # 작업 일시 중지
